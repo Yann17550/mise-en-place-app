@@ -109,7 +109,7 @@ body {
 }
 
 /* ==========================================================================
-   5. CARTES DE TÂCHES INDIVIDUELLES (BLOCK A 100% DE LA LARGEUR DE L'ÉCRAN)
+   5. CARTES DE TÂCHES INDIVIDUELLES (GRID DE PRODUCTION ULTRA-COMPACTE)
    ========================================================================== */
 .task-card {
   width: 100%;
@@ -122,15 +122,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  transition: transform 0.2s, box-shadow 0.2s;
-  overflow: hidden; /* Anti-débordement horizontal de sécurité */
+  transition: background-color 0.2s, border-color 0.2s;
+  overflow: hidden;
 }
 
 .task-card:hover {
   box-shadow: var(--shadow-md);
 }
 
-/* Block parent : Sert d'empileur vertical pour Ligne 1 et Ligne 2 */
 .task-main-row {
   width: 100%;
   display: flex;
@@ -138,63 +137,55 @@ body {
   gap: var(--spacing-sm);
 }
 
-/* Ligne 1 : Grid horizontale stricte d'une largeur de 100% */
+/* Ligne 1 : Passage à 3 colonnes pour donner de l'air au Stepper */
 .task-info-inline {
   width: 100%;
   display: grid;
-  /* Distribution proportionnelle : Categorie (18%), Taille/Coupe (12%), Elément (42%), Stepper (28%) */
-  grid-template-columns: 18% 12% 42% 28%;
+  /* Distribution : Catégorie (20%), Nom + Coupe (50%), Stepper (30%) */
+  grid-template-columns: 20% 50% 30%;
   align-items: center;
   box-sizing: border-box;
 }
 
-/* Cellules de grille génériques - Bloquent le contenu dans sa boîte */
 .grid-cell {
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
-/* Autoriser le texte à s'enrouler sur lui-même uniquement pour le nom de l'élément */
-.grid-cell.lgn1-3 {
+/* Autoriser le retour à la ligne pour le bloc texte central */
+.grid-cell.lgn1-2 {
   white-space: normal;
   word-break: break-word;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* Aligner le Stepper (lgn1-4) tout à droite de sa cellule */
-.grid-cell.lgn1-4 {
+/* Aligner le Stepper tout à droite de sa cellule */
+.grid-cell.lgn1-3 {
   display: flex;
   justify-content: flex-end;
 }
 
 /* Badge de la catégorie (lgn1-1) */
 .task-category-badge {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #475569;
   background-color: #e2e8f0;
   padding: 4px 6px;
   border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   display: inline-block;
   text-align: center;
   max-width: 100%;
 }
 
-/* Info de coupe / épaisseur en ligne (lgn1-2) */
-.task-coupe-inline {
-  font-size: 0.9rem;
-  color: var(--color-warning);
-  font-weight: 500;
-  text-align: center;
-  display: block;
-}
-
-/* Intitulé du produit (lgn1-3) */
+/* Intitulé du produit (lgn1-2) */
 .task-name {
   font-size: 1.05rem;
   font-weight: 600;
@@ -202,8 +193,19 @@ body {
   line-height: 1.2;
 }
 
-/* Ligne 2 : Grid horizontale pour les notes et la durée (Affichée si volume > 0) */
+/* Info de coupe en petit, grisé, sans icône sous le texte */
+.task-coupe-subtext {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* Ligne 2 : Masquée par défaut, s'affiche uniquement si la carte est ACTIVE */
 .task-meta-row {
+  display: none; /* Sécurité maximale au repos */
+}
+
+.task-card.task-active .task-meta-row {
   width: 100%;
   display: grid;
   /* Distribution : Notes (70%), Durée totale calculée (30%) */
@@ -214,7 +216,7 @@ body {
   border-top: 1px dashed var(--border-color);
 }
 
-/* Cellule de Note (lgn2-1) : Autorise le retour à la ligne automatique */
+/* Cellule de Note (lgn2-1) */
 .grid-cell.lgn2-1 {
   white-space: normal;
   word-break: break-word;
@@ -230,7 +232,7 @@ body {
   width: 100%;
 }
 
-/* Cellule de Temps (lgn2-2) : Aligné à droite */
+/* Cellule de Temps (lgn2-2) */
 .grid-cell.lgn2-2 {
   display: flex;
   flex-direction: column;
@@ -247,7 +249,7 @@ body {
   color: var(--text-primary);
 }
 
-/* Nettoyage des anciennes classes devenues inutiles grâce au système Grid */
+/* Nettoyage des balises obsolètes */
 .task-separator, 
 .task-control-zone,
 .task-technical-details {

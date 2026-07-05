@@ -4,11 +4,9 @@ import Stepper from './Stepper';
 import { formatDuration } from '../utils/timeFormat';
 
 /**
- * Composant TaskItem - Représente un bloc complet de tâche sous forme de Grids responsives.
- * Intègre la charte de couleurs "Cuisine Pro" et l'affichage adaptatif sur mobile.
- *
- * @param {Object} props.task - Les données de la tâche/produit
- * @param {Function} props.onUpdateVolume - Fonction de mise à jour du volume dans la base
+ * Composant TaskItem - Version optimisée pour l'espace mobile.
+ * L'épaisseur est déplacée sous le nom de l'élément pour maximiser l'espace du Stepper.
+ * La Ligne 2 est strictement masquée si le volume est égal à 0.
  */
 const TaskItem = ({ task, onUpdateVolume }) => {
   const { 
@@ -18,59 +16,54 @@ const TaskItem = ({ task, onUpdateVolume }) => {
     thickness, 
     notes, 
     duration_per_unit, 
-    fixed_duration, // Temps incompressible
+    fixed_duration,
     volume 
   } = task;
 
-  // Calcul du temps total : (Volume * Temps unitaire) + Temps incompressible
+  // Calcul du temps total
   const totalDuration = (volume * (duration_per_unit || 0)) + (fixed_duration || 0);
 
-  // Gestion du changement de volume depuis le stepper
+  // Gestion du changement de volume
   const handleVolumeChange = (newVolume) => {
     if (onUpdateVolume) {
       onUpdateVolume(id, newVolume);
     }
   };
 
-  // Condition d'affichage : Si volume est à 0, on masque la Ligne 2
+  // Condition d'affichage : Strictement actif si volume supérieur à 0
   const isLigne2Visible = volume > 0;
 
   return (
     <div className={`task-card ${isLigne2Visible ? 'task-active' : ''}`}>
       <div className="task-main-row">
         
-        {/* Ligne 1 : Les informations essentielles et l'actionneur de volume */}
+        {/* Ligne 1 : Structure simplifiée à 3 colonnes pour le mobile */}
         <div className="task-info-inline">
-          {/* lgn1-1 : Catégorie (Alignée sur les variables de style globales) */}
+          {/* lgn1-1 : Catégorie */}
           <div className="grid-cell lgn1-1">
             <span className="task-category-badge">{category || 'Gras'}</span>
           </div>
 
-          {/* lgn1-2 : Épaisseur/Taille (Instruction de coupe / réglage machine) */}
+          {/* lgn1-2 : Élément principal + Info de coupe intégrée dessous */}
           <div className="grid-cell lgn1-2">
-            <span className="task-coupe-inline">{thickness ? `${thickness}` : '-'}</span>
-          </div>
-
-          {/* lgn1-3 : Élément principal (Le nom du produit, très lisible) */}
-          <div className="grid-cell lgn1-3">
             <span className="task-name">{name}</span>
+            {thickness && (
+              <span className="task-coupe-subtext">Trancheuse : {thickness}</span>
+            )}
           </div>
 
-          {/* lgn1-4 : Le Stepper (Contrôle d'action de 0 à N, poussé à droite) */}
-          <div className="grid-cell lgn1-4">
+          {/* lgn1-3 : Le Stepper (Poussé au maximum à droite) */}
+          <div className="grid-cell lgn1-3">
             <Stepper volume={volume} onChange={handleVolumeChange} />
           </div>
         </div>
 
-        {/* Ligne 2 : Détails d'exécution (Masquée si le volume est égal à 0) */}
+        {/* Ligne 2 : Affichée SEULEMENT si le produit est actif (> 0) */}
         {isLigne2Visible && (
           <div className="task-meta-row">
-            {/* lgn2-1 : Note de production (Consignes de travail / bloc gris clair) */}
             <div className="grid-cell lgn2-1">
               <span className="task-note">{notes || 'Aucune note'}</span>
             </div>
-
-            {/* lgn2-2 : Durée totale calculée incluant le temps incompressible */}
             <div className="grid-cell lgn2-2">
               <div className="task-time-result">
                 ⏱️ <strong>{formatDuration(totalDuration)}</strong>

@@ -3,9 +3,8 @@ import React from 'react';
 import Stepper from './Stepper';
 
 /**
- * Composant TaskItem - Structure Grid 3 colonnes optimisée pour mobile.
- * L'épaisseur est intégrée sous le nom du produit.
- * La Ligne 2 s'affiche UNIQUEMENT si volume > 0.
+ * Composant TaskItem - Version corrigée avec les vraies données de Supabase.
+ * L'épaisseur est sous le nom, la ligne 2 disparaît si volume === 0.
  */
 const TaskItem = ({ task, onUpdateVolume }) => {
   const { 
@@ -22,7 +21,7 @@ const TaskItem = ({ task, onUpdateVolume }) => {
   // Calcul du temps total en minutes
   const totalMinutes = (volume * (duration_per_unit || 0)) + (fixed_duration || 0);
 
-  // Formatage simple de la durée en texte (ex: 45 min ou 1h15)
+  // Formatage propre du temps
   const renderDuration = (minutes) => {
     if (minutes <= 0) return '0 min';
     if (minutes < 60) return `${minutes} min`;
@@ -41,14 +40,14 @@ const TaskItem = ({ task, onUpdateVolume }) => {
     <div className={`task-card ${volume > 0 ? 'task-active' : ''}`}>
       <div className="task-main-row">
         
-        {/* Ligne 1 : Les informations essentielles (Grid à 3 colonnes) */}
+        {/* Ligne 1 : Grid responsive 3 colonnes */}
         <div className="task-info-inline">
-          {/* lgn1-1 : Catégorie */}
+          {/* lgn1-1 : Vraie Catégorie de Supabase */}
           <div className="grid-cell lgn1-1">
-            <span className="task-category-badge">{category || 'Gras'}</span>
+            <span className="task-category-badge">{category || 'Général'}</span>
           </div>
 
-          {/* lgn1-2 : Nom de l'élément + Épaisseur glissée en dessous */}
+          {/* lgn1-2 : Nom du produit + Épaisseur dessous */}
           <div className="grid-cell lgn1-2">
             <span className="task-name">{name}</span>
             {thickness && (
@@ -62,15 +61,12 @@ const TaskItem = ({ task, onUpdateVolume }) => {
           </div>
         </div>
 
-        {/* Ligne 2 : Condition stricte en React -> Si volume est à 0, RIEN n'est généré */}
+        {/* Ligne 2 : Strictement masquée si volume à 0 */}
         {volume > 0 && (
           <div className="task-meta-row">
-            {/* lgn2-1 : Consigne / Note */}
             <div className="grid-cell lgn2-1">
               <span className="task-note">{notes || 'Aucune note'}</span>
             </div>
-
-            {/* lgn2-2 : Temps total calculé */}
             <div className="grid-cell lgn2-2">
               <div className="task-time-result">
                 ⏱️ <strong>{renderDuration(totalMinutes)}</strong>

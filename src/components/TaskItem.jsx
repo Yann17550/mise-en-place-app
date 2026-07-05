@@ -3,26 +3,28 @@ import React from 'react';
 import Stepper from './Stepper';
 
 /**
- * Composant TaskItem - Structure Grid 3 colonnes optimisée pour mobile.
- * L'épaisseur est intégrée sous le nom du produit.
- * La Ligne 2 s'affiche UNIQUEMENT si volume > 0.
+ * Composant TaskItem - Version de production alignée sur le schéma Supabase.
+ * Structure Grid à 3 colonnes optimisée pour mobile, sans valeurs fictives par défaut.
+ *
+ * @param {Object} props.task - Les données de la tâche issues de Supabase
+ * @param {Function} props.onUpdateVolume - Fonction de mise à jour du volume
  */
 const TaskItem = ({ task, onUpdateVolume }) => {
   const { 
     id, 
-    name, 
-    category, 
+    nom,               // Vrai nom de colonne Supabase
+    category_id,       // Vrai nom de colonne Supabase
     thickness, 
     notes, 
-    duration_per_unit, 
+    temps_unitaire,    // Vrai nom de colonne Supabase
     fixed_duration,
     volume 
   } = task;
 
-  // Calcul du temps total en minutes
-  const totalMinutes = (volume * (duration_per_unit || 0)) + (fixed_duration || 0);
+  // Calcul du temps total basé sur les colonnes réelles
+  const totalMinutes = (volume * (temps_unitaire || 0)) + (fixed_duration || 0);
 
-  // Formatage simple de la durée en texte (ex: 45 min ou 1h15)
+  // Formatage autonome du temps de préparation
   const renderDuration = (minutes) => {
     if (minutes <= 0) return '0 min';
     if (minutes < 60) return `${minutes} min`;
@@ -41,16 +43,16 @@ const TaskItem = ({ task, onUpdateVolume }) => {
     <div className={`task-card ${volume > 0 ? 'task-active' : ''}`}>
       <div className="task-main-row">
         
-        {/* Ligne 1 : Les informations essentielles (Grid à 3 colonnes) */}
+        {/* Ligne 1 : Grid responsive 3 colonnes */}
         <div className="task-info-inline">
-          {/* lgn1-1 : Catégorie */}
+          {/* lgn1-1 : Identifiant de catégorie réel */}
           <div className="grid-cell lgn1-1">
-            <span className="task-category-badge">{category || 'Gras'}</span>
+            {category_id && <span className="task-category-badge">Cat. {category_id}</span>}
           </div>
 
-          {/* lgn1-2 : Nom de l'élément + Épaisseur glissée en dessous */}
+          {/* lgn1-2 : Nom réel du produit + Épaisseur conditionnelle dessous */}
           <div className="grid-cell lgn1-2">
-            <span className="task-name">{name}</span>
+            <span className="task-name">{nom}</span>
             {thickness && (
               <span className="task-coupe-subtext">Trancheuse : {thickness}</span>
             )}
@@ -62,15 +64,15 @@ const TaskItem = ({ task, onUpdateVolume }) => {
           </div>
         </div>
 
-        {/* Ligne 2 : Condition stricte en React -> Si volume est à 0, RIEN n'est généré */}
+        {/* Ligne 2 : Affichée et injectée uniquement si volume > 0 */}
         {volume > 0 && (
           <div className="task-meta-row">
-            {/* lgn2-1 : Consigne / Note */}
+            {/* lgn2-1 : Note ou consigne réelle de travail */}
             <div className="grid-cell lgn2-1">
-              <span className="task-note">{notes || 'Aucune note'}</span>
+              {notes && <span className="task-note">{notes}</span>}
             </div>
 
-            {/* lgn2-2 : Temps total calculé */}
+            {/* lgn2-2 : Durée totale calculée avec le temps unitaire réel */}
             <div className="grid-cell lgn2-2">
               <div className="task-time-result">
                 ⏱️ <strong>{renderDuration(totalMinutes)}</strong>

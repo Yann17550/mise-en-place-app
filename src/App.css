@@ -185,6 +185,17 @@ body {
   max-width: 100%;
 }
 
+/* Alignement strict à gauche pour le nom et la taille de coupe */
+.grid-cell.lgn1-2.task-text-left {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Aligne le début des textes à gauche */
+  justify-content: center;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Intitulé du produit (lgn1-2) */
 .task-name {
   font-size: 1.05rem;

@@ -3,28 +3,27 @@ import React from 'react';
 import Stepper from './Stepper';
 
 /**
- * Composant TaskItem - Version de production alignée sur le schéma Supabase.
- * Structure Grid à 3 colonnes optimisée pour mobile, sans valeurs fictives par défaut.
- *
- * @param {Object} props.task - Les données de la tâche issues de Supabase
- * @param {Function} props.onUpdateVolume - Fonction de mise à jour du volume
+ * Composant TaskItem - Alignement strict sur les colonnes de la base de données tasks.
+ * Grid à 3 colonnes optimisée pour le mobile, alignée à gauche.
  */
 const TaskItem = ({ task, onUpdateVolume }) => {
   const { 
     id, 
-    nom,               // Vrai nom de colonne Supabase
-    category_id,       // Vrai nom de colonne Supabase
-    thickness, 
-    notes, 
-    temps_unitaire,    // Vrai nom de colonne Supabase
-    fixed_duration,
+    nom,
+    temps_unitaire,
+    is_multipliable,
+    categorie,
+    taille_coupe,
+    taille_batch,
+    tps_incompressible,
+    note,
     volume 
   } = task;
 
-  // Calcul du temps total basé sur les colonnes réelles
-  const totalMinutes = (volume * (temps_unitaire || 0)) + (fixed_duration || 0);
+  // Calcul du temps total : (Volume * Temps unitaire) + Temps incompressible
+  const totalMinutes = (volume * (temps_unitaire || 0)) + (tps_incompressible || 0);
 
-  // Formatage autonome du temps de préparation
+  // Formatage propre et autonome du temps
   const renderDuration = (minutes) => {
     if (minutes <= 0) return '0 min';
     if (minutes < 60) return `${minutes} min`;
@@ -39,40 +38,43 @@ const TaskItem = ({ task, onUpdateVolume }) => {
     }
   };
 
+  // Condition d'affichage stricte : si le volume est à 0, la ligne 2 n'existe pas
+  const isLigne2Visible = volume > 0;
+
   return (
-    <div className={`task-card ${volume > 0 ? 'task-active' : ''}`}>
+    <div className={`task-card ${isLigne2Visible ? 'task-active' : ''}`}>
       <div className="task-main-row">
         
-        {/* Ligne 1 : Grid responsive 3 colonnes */}
+        {/* Ligne 1 : Grid responsive à 3 colonnes */}
         <div className="task-info-inline">
-          {/* lgn1-1 : Identifiant de catégorie réel */}
+          {/* lgn1-1 : Vraie catégorie textuelle */}
           <div className="grid-cell lgn1-1">
-            {category_id && <span className="task-category-badge">Cat. {category_id}</span>}
+            {categorie && <span className="task-category-badge">{categorie}</span>}
           </div>
 
-          {/* lgn1-2 : Nom réel du produit + Épaisseur conditionnelle dessous */}
-          <div className="grid-cell lgn1-2">
+          {/* lgn1-2 : Nom de l'élément + Épaisseur (taille_coupe) juste en dessous, aligné à gauche */}
+          <div className="grid-cell lgn1-2 task-text-left">
             <span className="task-name">{nom}</span>
-            {thickness && (
-              <span className="task-coupe-subtext">Trancheuse : {thickness}</span>
+            {taille_coupe && (
+              <span className="task-coupe-subtext">Trancheuse : {taille_coupe}</span>
             )}
           </div>
 
-          {/* lgn1-3 : Le Stepper */}
+          {/* lgn1-3 : Le Stepper poussé à droite */}
           <div className="grid-cell lgn1-3">
             <Stepper volume={volume} onChange={handleVolumeChange} />
           </div>
         </div>
 
-        {/* Ligne 2 : Affichée et injectée uniquement si volume > 0 */}
-        {volume > 0 && (
+        {/* Ligne 2 : Affichée seulement si volume > 0 */}
+        {isLigne2Visible && (
           <div className="task-meta-row">
-            {/* lgn2-1 : Note ou consigne réelle de travail */}
+            {/* lgn2-1 : Note de production réelle */}
             <div className="grid-cell lgn2-1">
-              {notes && <span className="task-note">{notes}</span>}
+              {note && <span className="task-note">{note}</span>}
             </div>
 
-            {/* lgn2-2 : Durée totale calculée avec le temps unitaire réel */}
+            {/* lgn2-2 : Durée totale calculée */}
             <div className="grid-cell lgn2-2">
               <div className="task-time-result">
                 ⏱️ <strong>{renderDuration(totalMinutes)}</strong>

@@ -1,12 +1,11 @@
 // src/components/TaskItem.jsx
 import React from 'react';
 import Stepper from './Stepper';
-import { formatDuration } from '../utils/timeFormat';
 
 /**
- * Composant TaskItem - Version optimisée pour l'espace mobile.
- * L'épaisseur est déplacée sous le nom de l'élément pour maximiser l'espace du Stepper.
- * La Ligne 2 est strictement masquée si le volume est égal à 0.
+ * Composant TaskItem - Structure Grid 3 colonnes optimisée pour mobile.
+ * L'épaisseur est intégrée sous le nom du produit.
+ * La Ligne 2 s'affiche UNIQUEMENT si volume > 0.
  */
 const TaskItem = ({ task, onUpdateVolume }) => {
   const { 
@@ -20,31 +19,36 @@ const TaskItem = ({ task, onUpdateVolume }) => {
     volume 
   } = task;
 
-  // Calcul du temps total
-  const totalDuration = (volume * (duration_per_unit || 0)) + (fixed_duration || 0);
+  // Calcul du temps total en minutes
+  const totalMinutes = (volume * (duration_per_unit || 0)) + (fixed_duration || 0);
 
-  // Gestion du changement de volume
+  // Formatage simple de la durée en texte (ex: 45 min ou 1h15)
+  const renderDuration = (minutes) => {
+    if (minutes <= 0) return '0 min';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
+  };
+
   const handleVolumeChange = (newVolume) => {
     if (onUpdateVolume) {
       onUpdateVolume(id, newVolume);
     }
   };
 
-  // Condition d'affichage : Strictement actif si volume supérieur à 0
-  const isLigne2Visible = volume > 0;
-
   return (
-    <div className={`task-card ${isLigne2Visible ? 'task-active' : ''}`}>
+    <div className={`task-card ${volume > 0 ? 'task-active' : ''}`}>
       <div className="task-main-row">
         
-        {/* Ligne 1 : Structure simplifiée à 3 colonnes pour le mobile */}
+        {/* Ligne 1 : Les informations essentielles (Grid à 3 colonnes) */}
         <div className="task-info-inline">
           {/* lgn1-1 : Catégorie */}
           <div className="grid-cell lgn1-1">
             <span className="task-category-badge">{category || 'Gras'}</span>
           </div>
 
-          {/* lgn1-2 : Élément principal + Info de coupe intégrée dessous */}
+          {/* lgn1-2 : Nom de l'élément + Épaisseur glissée en dessous */}
           <div className="grid-cell lgn1-2">
             <span className="task-name">{name}</span>
             {thickness && (
@@ -52,21 +56,24 @@ const TaskItem = ({ task, onUpdateVolume }) => {
             )}
           </div>
 
-          {/* lgn1-3 : Le Stepper (Poussé au maximum à droite) */}
+          {/* lgn1-3 : Le Stepper */}
           <div className="grid-cell lgn1-3">
             <Stepper volume={volume} onChange={handleVolumeChange} />
           </div>
         </div>
 
-        {/* Ligne 2 : Affichée SEULEMENT si le produit est actif (> 0) */}
-        {isLigne2Visible && (
+        {/* Ligne 2 : Condition stricte en React -> Si volume est à 0, RIEN n'est généré */}
+        {volume > 0 && (
           <div className="task-meta-row">
+            {/* lgn2-1 : Consigne / Note */}
             <div className="grid-cell lgn2-1">
               <span className="task-note">{notes || 'Aucune note'}</span>
             </div>
+
+            {/* lgn2-2 : Temps total calculé */}
             <div className="grid-cell lgn2-2">
               <div className="task-time-result">
-                ⏱️ <strong>{formatDuration(totalDuration)}</strong>
+                ⏱️ <strong>{renderDuration(totalMinutes)}</strong>
               </div>
             </div>
           </div>

@@ -142,7 +142,7 @@ body {
   width: 100%;
   display: grid;
   /* Distribution : Catégorie (20%), Nom + Coupe (50%), Stepper (30%) */
-  grid-template-columns: 20% 50% 30%;
+  grid-template-columns: 35% 35% 30%;
   align-items: center;
   box-sizing: border-box;
 }

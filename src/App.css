@@ -305,3 +305,94 @@ body {
   color: #16a34a;            /* Temps fortifié en vert */
   font-size: 1.05rem;
 }
+
+/* ==========================================
+   STYLES MULTI-ÉTABLISSEMENTS (HEADER & TOGGLES)
+   ========================================== */
+
+/* Conteneur du sélecteur d'établissement dans le titre */
+.etablissement-selector-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Boutons du toggle principal */
+.toggle-etab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #64748b;
+  font-weight: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Redimensionnement strict des logos du header */
+.etab-toggle-logo {
+  width: auto;
+  height: 24px; /* Hauteur fixe pour éviter l'effet géant */
+  max-width: 100px;
+  object-fit: contain;
+}
+
+/* États actifs pour les boutons principaux */
+.toggle-etab-btn.active-vesuvio {
+  background-color: #1e293b;
+  color: #ffffff;
+  border-color: #1e293b;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-etab-btn.active-dolus {
+  background-color: #0284c7; /* Bleu océan pour Oléron */
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Effets de survol pour les boutons inactifs */
+.toggle-etab-btn:hover:not(.active-vesuvio):not(.active-dolus) {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Structure de la ligne pour inclure la barre inférieure sans casser le border-radius */
+.task-row-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Correction pour que la carte du dessus n'ait pas de coins inférieurs ronds */
+.task-row-container .task-card {
+  margin-bottom: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Style de la barre de préparation en ligne sous chaque carte */
+.task-preparateur-inline-bar {
+  border-top: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Boutons miniatures de la barre inférieure */
+.inline-preparateur-toggle button {
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.inline-preparateur-toggle button:hover:not([disabled]) {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.inline-preparateur-toggle button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

@@ -4,7 +4,7 @@ import Stepper from './Stepper';
 import { formatMinutesToHours } from '../utils/timeFormat';
 
 /**
- * Composant TaskItem - Version de production stabilisée.
+ * Composant TaskItem - Version de production stabilisée et corrigée.
  * Grid responsive 3 colonnes (35% / 35% / 30%). Alignement à gauche sur l'élément.
  */
 const TaskItem = ({ task, quantite, onUpdate, isReadOnly = false }) => {
@@ -82,7 +82,7 @@ const TaskItem = ({ task, quantite, onUpdate, isReadOnly = false }) => {
         )}
 
       </div>
-    </div>
+    </li>
   );
 };
 

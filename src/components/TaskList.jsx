@@ -4,11 +4,17 @@ import { supabase } from '../services/supabaseClient';
 import TaskItem from './TaskItem';
 import { formatMinutesToHours } from '../utils/timeFormat';
 
+/**
+ * Composant TaskList
+ * Gère l'affichage des tâches, le calcul du temps de production global et la
+ * synchronisation bidirectionnelle en temps réel via Supabase Realtime.
+ */
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
   const [quantites, setQuantites] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // 1. Chargement initial des données (Tasks et Planning Sessions)
   useEffect(() => {
     async function loadData() {
       const { data: taskData } = await supabase.from('tasks').select('*');
@@ -23,6 +29,44 @@ const TaskList = () => {
       setLoading(false);
     }
     loadData();
+  }, []);
+
+  // 2. Abonnement en temps réel aux modifications de la table 'planning_sessions'
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:planning_sessions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Écoute les événements INSERT, UPDATE et DELETE
+          schema: 'public',
+          table: 'planning_sessions'
+        },
+        (payload) => {
+          // Gestion des cas INSERT ou UPDATE
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const { task_id, quantite: newQty } = payload.new;
+            setQuantites((prevQuantites) => ({
+              ...prevQuantites,
+              [task_id]: newQty
+            }));
+          }
+          // Gestion du cas DELETE (remise à zéro par sécurité si une ligne disparaît)
+          else if (payload.eventType === 'DELETE') {
+            const { task_id } = payload.old;
+            setQuantites((prevQuantites) => ({
+              ...prevQuantites,
+              [task_id]: 0
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    // Nettoyage de l'abonnement lors du démontage du composant
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Détection : Est-ce qu'un produit de la catégorie Trancheuse est actif ?
@@ -44,6 +88,7 @@ const TaskList = () => {
     return taskNettoyage ? taskNettoyage.id : null;
   }, [tasks]);
 
+  // Envoi des modifications locales vers la base de données PostgreSQL
   const handleUpdate = async (taskId, newQ) => {
     const updatedQuantites = { ...quantites, [taskId]: newQ };
 
@@ -75,6 +120,7 @@ const TaskList = () => {
       }
     }
 
+    // Mise à jour de l'état local avant le traitement de la requête asynchrone pour garantir la réactivité de l'interface
     setQuantites(updatedQuantites);
 
     await supabase.from('planning_sessions').upsert({

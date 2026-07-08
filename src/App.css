@@ -34,6 +34,125 @@
 }
 
 /* ==========================================================================
+   ÉCRAN D'ACCUEIL : SÉLECTION DE L'ÉTABLISSEMENT (DESIGN ÉPURÉ)
+   ========================================================================== */
+.welcome-screen-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+  padding: 20px;
+}
+
+.welcome-card {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.welcome-card h2 {
+  color: #1e293b;
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.welcome-card p {
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.welcome-buttons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.welcome-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Redimensionnement propre des logos sur l'accueil */
+.welcome-btn img {
+  height: 40px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.welcome-btn span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.welcome-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.btn-vesuvio:hover { border-color: #1e293b; }
+.btn-dolus:hover { border-color: #0284c7; }
+
+
+/* ==========================================================================
+   BARRE DE PRÉPARATION SOUS LES STEPPERS & FORÇAGE VERT ACTIVE
+   ========================================================================== */
+.task-row-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Forçage de la couleur verte si l'établissement doit produire cette tâche */
+.task-row-container .task-active .task-card {
+  background-color: #f0fdf4 !important; /* Vert clair de production */
+  border-color: #bbf7d0 !important;
+}
+
+/* On retire les arrondis du bas de la carte d'origine pour fusionner avec le sélecteur */
+.task-row-container .task-card {
+  margin-bottom: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Style de la barre de choix intégrée en dessous */
+.task-preparateur-inline-bar {
+  border-top: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Boutons miniatures de choix d'établissement */
+.inline-preparateur-toggle button {
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.inline-preparateur-toggle button:hover:not([disabled]) {
+  background-color: #f1f5f9;
+}
+
+/* Badge indicatif dans le header */
+.current-terminal-badge {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
    2. RESET & LAYOUT GLOBAL
    ========================================================================== */
 * {

@@ -13,7 +13,7 @@ const TaskList = () => {
   const [loading, setLoading] = useState(true);
   const [etablissementTerminal, setEtablissementTerminal] = useState(null);
 
-  // 1. Chargement initial
+  // 1. Chargement initial depuis Supabase
   useEffect(() => {
     async function loadData() {
       try {
@@ -38,7 +38,7 @@ const TaskList = () => {
         });
         setQuantites(initialQuantites);
       } catch (err) {
-        console.error(err);
+        console.error("Erreur au chargement initial :", err);
       } finally {
         setLoading(false);
       }
@@ -100,18 +100,32 @@ const TaskList = () => {
     });
   }, [tasks, quantites, idNettoyageTrancheuse]);
 
+  // FONCTION DE PERSISTANCE SÉCURISÉE AVEC LOGS D'ERREUR EXPLIQUÉS
   const persistSessionRow = async (taskId, demandeur, preparateur, qty, additionalFields = {}) => {
-    await supabase.from('planning_sessions').upsert(
-      {
+    try {
+      const currentRecord = quantites[taskId]?.[demandeur] || {};
+      
+      const payload = {
         task_id: taskId,
         etablissement_demandeur: demandeur,
         etablissement_preparateur: preparateur,
         quantite: qty,
         updated_at: new Date().toISOString(),
+        started_at: currentRecord.started_at || null,
+        completed_at: currentRecord.completed_at || null,
         ...additionalFields
-      },
-      { onConflict: 'task_id,etablissement_demandeur' }
-    );
+      };
+
+      const { error } = await supabase
+        .from('planning_sessions')
+        .upsert(payload, { onConflict: 'task_id,etablissement_demandeur' });
+
+      if (error) {
+        console.error("❌ Échec persistance Supabase :", error.message, error.details);
+      }
+    } catch (err) {
+      console.error("❌ Erreur critique lors de l'écriture :", err);
+    }
   };
 
   const handleQuantityChange = async (taskId, newQ) => {
@@ -124,12 +138,17 @@ const TaskList = () => {
     const updated = { ...quantites };
     if (!updated[taskId]) updated[taskId] = {};
     const oldRecord = updated[taskId][etablissementTerminal] || {};
+    
     updated[taskId][etablissementTerminal] = {
       ...oldRecord,
       quantite: newQ,
       etablissement_preparateur: preparateurDeterminement
     };
 
+    setQuantites(updated);
+    await persistSessionRow(taskId, etablissementTerminal, preparateurDeterminement, newQ);
+
+    // Logique chaînée pour le nettoyage automatique de la trancheuse
     if (idNettoyageTrancheuse && taskId !== idNettoyageTrancheuse) {
       const trancheuseSeraActive = tasks.some(task => {
         if ((task.categorie || '').toUpperCase() !== 'TRANCHEUSE' || task.id === idNettoyageTrancheuse) return false;
@@ -142,26 +161,28 @@ const TaskList = () => {
 
       if (!updated[idNettoyageTrancheuse]) updated[idNettoyageTrancheuse] = {};
       const qtyNettoyage = trancheuseSeraActive ? 1 : 0;
+      
       updated[idNettoyageTrancheuse]['VESUVIO'] = {
         ...updated[idNettoyageTrancheuse]['VESUVIO'],
         quantite: qtyNettoyage,
         etablissement_preparateur: 'VESUVIO'
       };
+      
+      setQuantites({ ...updated });
       await persistSessionRow(idNettoyageTrancheuse, 'VESUVIO', 'VESUVIO', qtyNettoyage);
     }
-
-    setQuantites(updated);
-    await persistSessionRow(taskId, etablissementTerminal, preparateurDeterminement, newQ);
   };
 
   const handlePreparateurToggle = async (taskId, nouveauPreparateur) => {
     const currentRecord = quantites[taskId]?.[etablissementTerminal] || { quantite: 0 };
     const updated = { ...quantites };
     if (!updated[taskId]) updated[taskId] = {};
+    
     updated[taskId][etablissementTerminal] = {
       ...currentRecord,
       etablissement_preparateur: nouveauPreparateur
     };
+    
     setQuantites(updated);
     await persistSessionRow(taskId, etablissementTerminal, nouveauPreparateur, currentRecord.quantite || 0);
   };
@@ -274,7 +295,6 @@ const TaskList = () => {
           const propreSaisie = recordsGlobaux[etablissementTerminal] || { quantite: 0, etablissement_preparateur: etablissementTerminal };
           const autreSaisie = recordsGlobaux[autreEtab] || { quantite: 0, etablissement_preparateur: autreEtab };
 
-          // 1. Détermination de la charge totale à exécuter physiquement ICI
           let totalAProduireIci = 0;
           if (propreSaisie.etablissement_preparateur === etablissementTerminal) totalAProduireIci += propreSaisie.quantite || 0;
           if (autreSaisie.etablissement_preparateur === etablissementTerminal) totalAProduireIci += autreSaisie.quantite || 0;
@@ -282,24 +302,16 @@ const TaskList = () => {
           const jeDoisPreparerPourMoi = propreSaisie.etablissement_preparateur === etablissementTerminal && propreSaisie.quantite > 0;
           const jeDoisPreparerPourAutre = autreSaisie.etablissement_preparateur === etablissementTerminal && autreSaisie.quantite > 0;
           
-          // Ligne active au vert si du travail est affecté à notre atelier (demande interne OU commande externe)
           const ligneEstActiveIci = totalAProduireIci > 0;
-
-          // 2. Détermination si j'ai passé commande à l'autre atelier (et donc que je ne produis rien ici)
           const jaiDelegueALautre = propreSaisie.etablissement_preparateur === autreEtab && propreSaisie.quantite > 0;
 
-          // Choix de la classe CSS dynamique envoyée à TaskItem
           let dynamicClassName = '';
           if (ligneEstActiveIci) dynamicClassName = 'task-active';
           else if (jaiDelegueALautre) dynamicClassName = 'task-delegated';
 
-          // LA CLÉ : La quantité affichée par le stepper/badge doit refléter le volume réel requis !
-          // Si on produit, on affiche le TOTAL (Moi + L'autre). Si on a commandé ailleurs, on affiche notre saisie locale.
           const quantiteVisuelleAAfficher = ligneEstActiveIci ? totalAProduireIci : propreSaisie.quantite;
-
           const preparateurLigneDesigné = isTrancheuse ? 'VESUVIO' : propreSaisie.etablissement_preparateur;
 
-          // Construction des badges d'alertes textuelles
           let noteEntraide = '';
           if (jeDoisPreparerPourAutre) {
             noteEntraide = `📢 dont ${autreSaisie.quantite} pour ${nomAutreAffiche}`;

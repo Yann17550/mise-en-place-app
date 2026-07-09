@@ -29,7 +29,7 @@ export const useTaskLogic = (tasks, quantites, setQuantites, persistSessionRow, 
     });
   }, [tasks, quantites, idNettoyageTrancheuse]);
 
-  // 3. Action : Changement de quantité via le Stepper
+  // 3. Action : Changement de quantité via le Stepper (Ne touche JAMAIS au préparateur actuel)
   const handleQuantityChange = async (taskId, newQ) => {
     try {
       if (!etablissementTerminal) return;
@@ -37,14 +37,15 @@ export const useTaskLogic = (tasks, quantites, setQuantites, persistSessionRow, 
       const targetTask = tasks.find(t => t.id === taskId);
       const isTrancheuse = (targetTask?.categorie || '').toUpperCase() === 'TRANCHEUSE';
       
-      // Sécurité absolue : le préparateur doit être une chaîne d'établissement valide, jamais un ID
-      let preparateurDeterminement = etablissementTerminal; 
+      // On conserve le préparateur déjà choisi par l'utilisateur, ou on met l'atelier actuel par défaut
+      let preparateurActuel = etablissementTerminal;
       if (quantites[taskId]?.[etablissementTerminal]?.etablissement_preparateur) {
-        preparateurDeterminement = quantites[taskId][etablissementTerminal].etablissement_preparateur;
+        preparateurActuel = quantites[taskId][etablissementTerminal].etablissement_preparateur;
       }
       
+      // La trancheuse est une exception matérielle, elle reste toujours affectée au Vesuvio
       if (isTrancheuse) {
-        preparateurDeterminement = 'VESUVIO';
+        preparateurActuel = 'VESUVIO';
       }
 
       const updated = { ...quantites };
@@ -54,13 +55,13 @@ export const useTaskLogic = (tasks, quantites, setQuantites, persistSessionRow, 
       updated[taskId][etablissementTerminal] = {
         ...oldRecord,
         quantite: newQ,
-        etablissement_preparateur: preparateurDeterminement
+        etablissement_preparateur: preparateurActuel
       };
 
       setQuantites(updated);
-      await persistSessionRow(taskId, etablissementTerminal, preparateurDeterminement, newQ);
+      await persistSessionRow(taskId, etablissementTerminal, preparateurActuel, newQ);
 
-      // Gestion automatique du Nettoyage de la trancheuse (Uniquement si la tâche modifiée est une trancheuse)
+      // Gestion du Nettoyage automatique de la trancheuse (Uniquement si c'est un produit Trancheuse qui bouge)
       if (isTrancheuse && idNettoyageTrancheuse && taskId !== idNettoyageTrancheuse) {
         const trancheuseSeraActive = tasks.some(task => {
           if ((task.categorie || '').toUpperCase() !== 'TRANCHEUSE' || task.id === idNettoyageTrancheuse) return false;
@@ -87,22 +88,26 @@ export const useTaskLogic = (tasks, quantites, setQuantites, persistSessionRow, 
     }
   };
 
-  // 4. Action : Bascule de l'atelier ("Fait par : Vesuvio / Dolus")
+  // 4. Action : Bascule manuelle de l'atelier ("Fait par : Vesuvio / Dolus")
   const handlePreparateurToggle = async (taskId, nouveauPreparateur) => {
     try {
       if (!etablissementTerminal) return;
       if (nouveauPreparateur !== 'VESUVIO' && nouveauPreparateur !== 'DOLUS') return;
 
       const currentRecord = quantites[taskId]?.[etablissementTerminal] || { quantite: 0 };
+      
       const updated = { ...quantites };
       if (!updated[taskId]) updated[taskId] = {};
       
+      // On met à jour l'atelier préparateur en conservant STRICTEMENT la quantité saisie
       updated[taskId][etablissementTerminal] = {
         ...currentRecord,
         etablissement_preparateur: nouveauPreparateur
       };
       
       setQuantites(updated);
+      
+      // Sauvegarde immédiate dans Supabase
       await persistSessionRow(taskId, etablissementTerminal, nouveauPreparateur, currentRecord.quantite || 0);
     } catch (err) {
       console.error("❌ Erreur dans handlePreparateurToggle :", err);

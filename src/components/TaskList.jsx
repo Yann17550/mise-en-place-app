@@ -1,5 +1,5 @@
 // src/components/TaskList.jsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePlanningSession } from '../hooks/usePlanningSession';
 import { useTaskLogic } from '../hooks/useTaskLogic';
 import TaskRow from './TaskRow';
@@ -30,7 +30,40 @@ const TaskList = () => {
     handleTimeTracking
   } = useTaskLogic(tasks, quantites, setQuantites, persistSessionRow, etablissementTerminal);
 
-  // 3. Écran d'accueil et sélection de la session (Optimisé pour mobile tactile)
+  // 3. Tri dynamique des tâches pour remonter les préparations actives tout en haut
+  const sortedTasks = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    
+    return [...tasks].sort((taskA, taskB) => {
+      const recordsA = quantites[taskA.id] || {};
+      const recordsB = quantites[taskB.id] || {};
+      
+      const autreEtab = etablissementTerminal === 'VESUVIO' ? 'DOLUS' : 'VESUVIO';
+
+      // Vérification de l'activité pour la tâche A (production locale OU entraide reçue OU déléguée)
+      const qtyPropreA = recordsA[etablissementTerminal]?.quantite || 0;
+      const qtyAutreA = recordsA[autreEtab]?.quantite || 0;
+      const prepA = recordsA[etablissementTerminal]?.etablissement_preparateur || etablissementTerminal;
+      const prepAutreA = recordsA[autreEtab]?.etablissement_preparateur || autreEtab;
+
+      const aEstActive = qtyPropreA > 0 || (qtyAutreA > 0 && prepAutreA === etablissementTerminal);
+
+      // Vérification de l'activité pour la tâche B
+      const qtyPropreB = recordsB[etablissementTerminal]?.quantite || 0;
+      const qtyAutreB = recordsB[autreEtab]?.quantite || 0;
+      const prepB = recordsB[etablissementTerminal]?.etablissement_preparateur || etablissementTerminal;
+      const prepAutreB = recordsB[autreEtab]?.etablissement_preparateur || autreEtab;
+
+      const bEstActive = qtyPropreB > 0 || (qtyAutreB > 0 && prepB === etablissementTerminal);
+
+      // Tri : les actives (true) passent avant les inactives (false)
+      if (aEstActive && !bEstActive) return -1;
+      if (!aEstActive && bEstActive) return 1;
+      return 0; // Garde l'ordre initial (ou alphabétique de la BDD) si les deux sont dans le même état
+    });
+  }, [tasks, quantites, etablissementTerminal]);
+
+  // 4. Écran d'accueil et sélection de la session (Optimisé pour mobile tactile)
   if (!etablissementTerminal) {
     return (
       <div className="welcome-screen-container">
@@ -76,9 +109,9 @@ const TaskList = () => {
         </header>
       </div>
 
-      {/* Liste des lignes de tâches */}
+      {/* Liste des lignes de tâches triées dynamiquement */}
       <ul className="tasks-wrapper" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {tasks.map((task) => (
+        {sortedTasks.map((task) => (
           <TaskRow
             key={task.id}
             task={task}
@@ -89,7 +122,6 @@ const TaskList = () => {
             idNettoyageTrancheuse={idNettoyageTrancheuse}
             isTrancheuseUtiliseeGlobalement={isTrancheuseUtiliseeGlobalement}
             onQuantityChange={(q) => handleQuantityChange(task.id, q)}
-            // CORRECTION DE LA TRANSMISSION DU TOGGLE ICI :
             onPreparateurToggle={(id, p) => handlePreparateurToggle(id, p)}
             onTimeTracking={handleTimeTracking}
           />

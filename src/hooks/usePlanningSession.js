@@ -5,7 +5,6 @@ import { supabase } from '../services/supabaseClient';
 /**
  * Hook personnalisé gérant la persistance, le chargement et la synchronisation Realtime
  * des sessions de planification de la mise en place.
- * @param {string} etablissementTerminal - L'établissement connecté ('VESUVIO' ou 'DOLUS')
  */
 export const usePlanningSession = (etablissementTerminal) => {
   const [tasks, setTasks] = useState([]);
@@ -62,7 +61,7 @@ export const usePlanningSession = (etablissementTerminal) => {
     loadInitialData();
   }, [etablissementTerminal]);
 
-  // 2. Écoute en arrière-plan des mutations de la base (Realtime)
+  // 2. Écoute en arrière-plan (Realtime) - CORRIGÉE POUR TOUT RECEVOIR SANS FILTRE BLOQUANT
   useEffect(() => {
     if (!etablissementTerminal) return;
 
@@ -78,13 +77,16 @@ export const usePlanningSession = (etablissementTerminal) => {
                 setQuantites((prev) => {
                   const updated = { ...prev };
                   if (!updated[task_id]) updated[task_id] = {};
+                  
+                  // LA CORRECTION EST ICI : On écrase ou crée l'enregistrement du DEMANDEUR,
+                  // peu importe qui a fait la modif, pour que l'autre écran capte la commande.
                   updated[task_id][etablissement_demandeur] = {
                     quantite: newQty ?? 0,
                     etablissement_preparateur: etablissement_preparateur || 'VESUVIO',
                     started_at,
                     completed_at
                   };
-                  return updated;
+                  return { ...updated }; // On force React a voir le changement de référence
                 });
               }
             }
@@ -96,7 +98,7 @@ export const usePlanningSession = (etablissementTerminal) => {
                   if (updated[task_id] && updated[task_id][etablissement_demandeur]) {
                     updated[task_id][etablissement_demandeur].quantite = 0;
                   }
-                  return updated;
+                  return { ...updated };
                 });
               }
             }
@@ -112,10 +114,10 @@ export const usePlanningSession = (etablissementTerminal) => {
     };
   }, [etablissementTerminal]);
 
-  // 3. Mutation de données persistante (Fonction centrale sécurisée d'écriture)
+  // 3. Mutation de données persistante
   const persistSessionRow = async (taskId, demandeur, preparateur, qty, additionalFields = {}) => {
     try {
-      // Récupération sécurisée des états temporels existants pour ne pas les écraser hors contexte chrono
+      // On récupère ce qu'on a en local au moment M
       const currentRecord = quantites[taskId]?.[demandeur] || {};
 
       const payload = {
@@ -124,8 +126,8 @@ export const usePlanningSession = (etablissementTerminal) => {
         etablissement_preparateur: preparateur,
         quantite: qty,
         updated_at: new Date().toISOString(),
-        started_at: currentRecord.started_at || null,
-        completed_at: currentRecord.completed_at || null,
+        started_at: additionalFields.hasOwnProperty('started_at') ? additionalFields.started_at : (currentRecord.started_at || null),
+        completed_at: additionalFields.hasOwnProperty('completed_at') ? additionalFields.completed_at : (currentRecord.completed_at || null),
         ...additionalFields
       };
 

@@ -166,7 +166,6 @@ const TaskList = () => {
     await persistSessionRow(taskId, etablissementTerminal, nouveauPreparateur, currentRecord.quantite || 0);
   };
 
-  // CHRONO ET ARCHIVAGE AUTOMATIQUE DANS L'HISTORIQUE
   const handleTimeTracking = async (taskId, demandeurConcret, action) => {
     const record = quantites[taskId]?.[demandeurConcret];
     const targetTask = tasks.find(t => t.id === taskId);
@@ -175,27 +174,23 @@ const TaskList = () => {
     const nowIso = new Date().toISOString();
 
     if (action === 'START') {
-      // 1. On lance le chrono localement et sur Supabase
       const updated = { ...quantites };
       updated[taskId][demandeurConcret] = { ...record, started_at: nowIso, completed_at: null };
       setQuantites(updated);
       await persistSessionRow(taskId, demandeurConcret, record.etablissement_preparateur, record.quantite, { started_at: nowIso, completed_at: null });
     } 
     else if (action === 'STOP') {
-      // 2. C'est FINI : On calcule les temps
       const startLog = new Date(record.started_at);
       const endLog = new Date(nowIso);
       const diffMs = endLog - startLog;
-      const minutesReelles = Math.max(1, Math.round(diffMs / 1000 / 60)); // Minimum 1 minute
+      const minutesReelles = Math.max(1, Math.round(diffMs / 1000 / 60));
 
-      // Calcul du temps théorique correspondant à la quantité
       let tempsTheorique = targetTask.temps_unitaire || 0;
       if (targetTask.is_multipliable) {
         const nbBatches = Math.ceil(record.quantite / (targetTask.taille_batch || 1));
         tempsTheorique = (targetTask.tps_incompressible || 0) + (nbBatches * (targetTask.temps_unitaire || 0));
       }
 
-      // 3. On pousse la ligne dans la table définitive 'prep_history'
       await supabase.from('prep_history').insert({
         task_id: taskId,
         task_nom: targetTask.nom,
@@ -209,7 +204,6 @@ const TaskList = () => {
         completed_at: nowIso
       });
 
-      // 4. On libère la ligne de session (Remise à 0) pour vider l'écran
       const updated = { ...quantites };
       updated[taskId][demandeurConcret] = { quantite: 0, etablissement_preparateur: record.etablissement_preparateur, started_at: null, completed_at: null };
       setQuantites(updated);
@@ -275,20 +269,42 @@ const TaskList = () => {
           const recordsGlobaux = quantites[task.id] || {};
           const isTrancheuse = (task.categorie || '').toUpperCase() === 'TRANCHEUSE';
           const autreEtab = etablissementTerminal === 'VESUVIO' ? 'DOLUS' : 'VESUVIO';
+          const nomAutreAffiche = etablissementTerminal === 'VESUVIO' ? "Pizza d'Oléron" : "Le Vesuvio";
 
           const propreSaisie = recordsGlobaux[etablissementTerminal] || { quantite: 0, etablissement_preparateur: etablissementTerminal };
           const autreSaisie = recordsGlobaux[autreEtab] || { quantite: 0, etablissement_preparateur: autreEtab };
 
+          // 1. Détermination de la charge totale à exécuter physiquement ICI
+          let totalAProduireIci = 0;
+          if (propreSaisie.etablissement_preparateur === etablissementTerminal) totalAProduireIci += propreSaisie.quantite || 0;
+          if (autreSaisie.etablissement_preparateur === etablissementTerminal) totalAProduireIci += autreSaisie.quantite || 0;
+
           const jeDoisPreparerPourMoi = propreSaisie.etablissement_preparateur === etablissementTerminal && propreSaisie.quantite > 0;
           const jeDoisPreparerPourAutre = autreSaisie.etablissement_preparateur === etablissementTerminal && autreSaisie.quantite > 0;
-          const ligneEstActiveIci = jeDoisPreparerPourMoi || jeDoisPreparerPourAutre;
+          
+          // Ligne active au vert si du travail est affecté à notre atelier (demande interne OU commande externe)
+          const ligneEstActiveIci = totalAProduireIci > 0;
+
+          // 2. Détermination si j'ai passé commande à l'autre atelier (et donc que je ne produis rien ici)
+          const jaiDelegueALautre = propreSaisie.etablissement_preparateur === autreEtab && propreSaisie.quantite > 0;
+
+          // Choix de la classe CSS dynamique envoyée à TaskItem
+          let dynamicClassName = '';
+          if (ligneEstActiveIci) dynamicClassName = 'task-active';
+          else if (jaiDelegueALautre) dynamicClassName = 'task-delegated';
+
+          // LA CLÉ : La quantité affichée par le stepper/badge doit refléter le volume réel requis !
+          // Si on produit, on affiche le TOTAL (Moi + L'autre). Si on a commandé ailleurs, on affiche notre saisie locale.
+          const quantiteVisuelleAAfficher = ligneEstActiveIci ? totalAProduireIci : propreSaisie.quantite;
 
           const preparateurLigneDesigné = isTrancheuse ? 'VESUVIO' : propreSaisie.etablissement_preparateur;
 
-          let noteEntraide = null;
-          if (autreSaisie.etablissement_preparateur === etablissementTerminal && autreSaisie.quantite > 0) {
-            const nomAfficheAutre = etablissementTerminal === 'VESUVIO' ? "Pizza d'Oléron" : "Le Vesuvio";
-            noteEntraide = `dont ${autreSaisie.quantite} pour ${nomAfficheAutre}`;
+          // Construction des badges d'alertes textuelles
+          let noteEntraide = '';
+          if (jeDoisPreparerPourAutre) {
+            noteEntraide = `📢 dont ${autreSaisie.quantite} pour ${nomAutreAffiche}`;
+          } else if (jaiDelegueALautre) {
+            noteEntraide = `📦 ${propreSaisie.quantite} envoyé à : ${nomAutreAffiche}`;
           }
 
           const estLeNettoyageAutomatique = task.id === idNettoyageTrancheuse && isTrancheuseUtiliseeGlobalement;
@@ -298,12 +314,12 @@ const TaskList = () => {
               <TaskItem 
                 task={{
                   ...task,
-                  note: noteEntraide ? `${task.note || ''} 📢 ${noteEntraide}`.trim() : task.note
+                  note: noteEntraide ? `${task.note || ''} ${noteEntraide}`.trim() : task.note
                 }}
-                quantite={propreSaisie.quantite}
+                quantite={quantiteVisuelleAAfficher}
                 onUpdate={(q) => handleQuantityChange(task.id, q)}
                 isReadOnly={estLeNettoyageAutomatique}
-                className={ligneEstActiveIci ? 'task-active' : ''}
+                className={dynamicClassName}
               />
               
               <div className="task-preparateur-inline-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '8px 16px', background: '#f8fafc', borderBottomRightRadius: '8px', borderBottomLeftRadius: '8px', marginTop: '-4px', border: '1px solid #e2e8f0', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -328,6 +344,11 @@ const TaskList = () => {
                         />
                       )}
                     </div>
+                  )}
+                  {jaiDelegueALautre && (
+                    <span style={{ fontSize: '11px', color: '#0284c7', fontStyle: 'italic', fontWeight: '500' }}>
+                      En attente de l'autre atelier...
+                    </span>
                   )}
                 </div>
 

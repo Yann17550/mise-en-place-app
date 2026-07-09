@@ -89,7 +89,8 @@ const TaskList = () => {
             idNettoyageTrancheuse={idNettoyageTrancheuse}
             isTrancheuseUtiliseeGlobalement={isTrancheuseUtiliseeGlobalement}
             onQuantityChange={(q) => handleQuantityChange(task.id, q)}
-            onPreparateurToggle={(p) => handlePreparateurToggle(task.id, p)}
+            // CORRECTION DE LA TRANSMISSION DU TOGGLE ICI :
+            onPreparateurToggle={(id, p) => handlePreparateurToggle(id, p)}
             onTimeTracking={handleTimeTracking}
           />
         ))}
